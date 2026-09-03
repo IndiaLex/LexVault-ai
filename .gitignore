@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+.omo/
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# PaddleOCR / PaddlePaddle
+.paddleocr/
+.paddle/
+inference_results/
+output/
+log_output/
+
+# Temp files
+*.tmp
+*.temp
+*.log
+
+# MinIO data (if running locally)
+minio_data/
+
+# Model caches (downloaded on first run)
+*.onnx
+*.pdmodel
+*.pdiparams
+*.pdopt
+
+# Keep sample_docs and accuracy_report
+!sample_docs/
+!accuracy_report.json

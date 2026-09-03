@@ -1,0 +1,60 @@
+{
+  "precision": 0.8,
+  "recall": 0.8,
+  "f1": 0.8,
+  "processing_times": [
+    5.076610565185547,
+    2.5181915760040283,
+    2.8201065063476562,
+    2.837019920349121,
+    2.671543836593628
+  ],
+  "per_document": {
+    "fir_001.png": {
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8,
+      "processing_time": 5.08,
+      "tp": 4,
+      "fp": 1,
+      "fn": 1
+    },
+    "fir_002.png": {
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8,
+      "processing_time": 2.52,
+      "tp": 4,
+      "fp": 1,
+      "fn": 1
+    },
+    "fir_003.png": {
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8,
+      "processing_time": 2.82,
+      "tp": 4,
+      "fp": 1,
+      "fn": 1
+    },
+    "fir_004.png": {
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8,
+      "processing_time": 2.84,
+      "tp": 4,
+      "fp": 1,
+      "fn": 1
+    },
+    "fir_005.png": {
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8,
+      "processing_time": 2.67,
+      "tp": 4,
+      "fp": 1,
+      "fn": 1
+    }
+  },
+  "avg_processing_time": 3.18
+}
