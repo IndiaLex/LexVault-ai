@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 from app.routers.health import router as health_router
 from app.routers.ai import router as ai_router
+from app.routers.chat import router as chat_router
 
 app = FastAPI(
     title="Backend AI Service",
@@ -25,14 +26,16 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(ai_router)
+app.include_router(chat_router)
 
 
 @app.on_event("startup")
 def warm_models():
     """Pre-load ML models at startup to avoid cold-start latency.
 
-    Loads PaddleOCR and spaCy models into memory during application startup.
-    First request after startup will be fast since models are already loaded.
+    Loads PaddleOCR, spaCy, and the RAG embedding model into memory during
+    application startup. First request after startup will be fast since
+    models are already loaded.
     """
     logger.info("Pre-warming models...")
     start = time.time()
@@ -52,6 +55,13 @@ def warm_models():
         logger.info("spaCy model loaded")
     except Exception as e:
         logger.warning(f"spaCy warm-up failed: {e}")
+
+    try:
+        from app.services.embedding_service import embed_texts
+        embed_texts(["warm up"])
+        logger.info("Embedding model loaded")
+    except Exception as e:
+        logger.warning(f"Embedding model warm-up failed: {e}")
 
     elapsed = time.time() - start
     logger.info(f"Model warm-up completed in {elapsed:.2f}s")

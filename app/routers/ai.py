@@ -31,8 +31,31 @@ from app.services.redaction_service import (
 from app.services.pii_service import classify_pii_entities, needs_review
 from app.services.classifier import classify_document
 from app.services.redaction_policy import apply_redaction_policy
+from app.services.chunking import chunk_text
+from app.services.embedding_service import embed_texts
+from app.services.vector_store import vector_store
 
 router = APIRouter()
+
+
+def index_document(document_id, storage_key, doc_class, ocr_text, access_roles):
+    """Chunk + embed OCR text and store in vector index for RAG chatbot."""
+    chunks = chunk_text(ocr_text)
+    if not chunks:
+        return
+    embeddings = embed_texts(chunks)
+    records = [
+        {
+            "document_id": document_id,
+            "storage_key": storage_key,
+            "doc_class": doc_class,
+            "chunk_text": chunk,
+            "page": 0,  # single-page OCR abhi; multi-page banaoge toh yahan actual page number daalna
+            "access_roles": access_roles,
+        }
+        for chunk in chunks
+    ]
+    vector_store.add(embeddings, records)
 
 
 @router.post("/ai/process", response_model=AIResult)
@@ -48,7 +71,8 @@ def process_document(req: ProcessRequest) -> AIResult:
     6. Apply redaction policy (preserve vs redact)
     7. Map char offsets to normalized page coordinates
     8. Classify document type
-    9. Return AIResult with all findings
+    9. Index into vector store for RAG chatbot
+    10. Return AIResult with all findings
     """
     try:
         pages = load_document(req.storage_key)
@@ -121,6 +145,15 @@ def process_document(req: ProcessRequest) -> AIResult:
 
         doc_class, doc_confidence = classify_document(ocr_result.text)
         review_needed = needs_review(classified_entities)
+
+        # Index into vector store for RAG chatbot
+        index_document(
+            document_id=req.document_id,
+            storage_key=req.storage_key,
+            doc_class=doc_class,
+            ocr_text=ocr_result.text,
+            access_roles=["default"],
+        )
 
         return AIResult(
             document_id=req.document_id,

@@ -3,18 +3,18 @@
   "recall": 0.8,
   "f1": 0.8,
   "processing_times": [
-    5.076610565185547,
-    2.5181915760040283,
-    2.8201065063476562,
-    2.837019920349121,
-    2.671543836593628
+    18.03272247314453,
+    7.780471324920654,
+    7.76324462890625,
+    7.6482484340667725,
+    7.467301607131958
   ],
   "per_document": {
     "fir_001.png": {
       "precision": 0.8,
       "recall": 0.8,
       "f1": 0.8,
-      "processing_time": 5.08,
+      "processing_time": 18.03,
       "tp": 4,
       "fp": 1,
       "fn": 1
@@ -23,7 +23,7 @@
       "precision": 0.8,
       "recall": 0.8,
       "f1": 0.8,
-      "processing_time": 2.52,
+      "processing_time": 7.78,
       "tp": 4,
       "fp": 1,
       "fn": 1
@@ -32,7 +32,7 @@
       "precision": 0.8,
       "recall": 0.8,
       "f1": 0.8,
-      "processing_time": 2.82,
+      "processing_time": 7.76,
       "tp": 4,
       "fp": 1,
       "fn": 1
@@ -41,7 +41,7 @@
       "precision": 0.8,
       "recall": 0.8,
       "f1": 0.8,
-      "processing_time": 2.84,
+      "processing_time": 7.65,
       "tp": 4,
       "fp": 1,
       "fn": 1
@@ -50,11 +50,11 @@
       "precision": 0.8,
       "recall": 0.8,
       "f1": 0.8,
-      "processing_time": 2.67,
+      "processing_time": 7.47,
       "tp": 4,
       "fp": 1,
       "fn": 1
     }
   },
-  "avg_processing_time": 3.18
+  "avg_processing_time": 9.74
 }
