@@ -1,11 +1,10 @@
 from app.services.embedding_service import embed_texts
 from app.services.vector_store import vector_store
+from app.config import LOCAL_LLM_URL, LOCAL_LLM_MODEL, LOCAL_LLM_TOP_K
 import requests
 
-LOCAL_LLM_URL = "http://localhost:11434/api/generate"  # Ollama example
-LOCAL_LLM_MODEL = "llama3"  # apna local model daalo
 
-def answer_query(query: str, user_roles: list[str], top_k: int = 5) -> dict:
+def answer_query(query: str, user_roles: list[str], top_k: int = LOCAL_LLM_TOP_K) -> dict:
     query_vec = embed_texts([query])
     hits = vector_store.search(query_vec, allowed_roles=user_roles, top_k=top_k)
 

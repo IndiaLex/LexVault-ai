@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment (never bake secrets into image)
+.env
+.env.local
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PaddleOCR / PaddlePaddle cache
+.paddleocr/
+.paddle/
+inference_results/
+output/
+log_output/
+
+# Temp files
+*.tmp
+*.temp
+*.log
+
+# MinIO data
+minio_data/
+
+# Model caches (downloaded at build time)
+*.onnx
+*.pdmodel
+*.pdiparams
+*.pdopt
+
+# Vector store (ephemeral, lives in Docker volume)
+vector_store/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in image)
+*.md
+!README.md
+omo/
+.codegraph/

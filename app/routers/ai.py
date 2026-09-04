@@ -34,6 +34,7 @@ from app.services.redaction_policy import apply_redaction_policy
 from app.services.chunking import chunk_text
 from app.services.embedding_service import embed_texts
 from app.services.vector_store import vector_store
+from app.config import DEFAULT_ACCESS_ROLES
 
 router = APIRouter()
 
@@ -152,7 +153,7 @@ def process_document(req: ProcessRequest) -> AIResult:
             storage_key=req.storage_key,
             doc_class=doc_class,
             ocr_text=ocr_result.text,
-            access_roles=["default"],
+            access_roles=DEFAULT_ACCESS_ROLES,
         )
 
         return AIResult(

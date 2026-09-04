@@ -1,0 +1,53 @@
+services:
+  # ─── Backend AI Service ────────────────────────────────────────
+  backend-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lexvault-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override LLM URL to use the ollama service
+      - LOCAL_LLM_URL=http://ollama:11434/api/generate
+    volumes:
+      - vector_store:/app/vector_store
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Ollama LLM Server ────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lexvault-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Pull model on first run ──────────────────────────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: lexvault-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      sh -c "ollama pull llama3 && echo 'Model pulled successfully' && exit 0"
+    restart: "no"
+
+volumes:
+  vector_store:
+  ollama_data:

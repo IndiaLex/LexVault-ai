@@ -2,20 +2,18 @@ import faiss
 import numpy as np
 import pickle
 import os
+from app.config import VECTOR_INDEX_PATH, VECTOR_META_PATH, VECTOR_EMBED_DIM
 
-INDEX_PATH = "vector_store/index.faiss"
-META_PATH = "vector_store/meta.pkl"
-EMBED_DIM = 384  # for all-MiniLM-L6-v2
 
 class VectorStore:
     def __init__(self):
-        os.makedirs("vector_store", exist_ok=True)
-        if os.path.exists(INDEX_PATH):
-            self.index = faiss.read_index(INDEX_PATH)
-            with open(META_PATH, "rb") as f:
+        os.makedirs(os.path.dirname(VECTOR_INDEX_PATH) or ".", exist_ok=True)
+        if os.path.exists(VECTOR_INDEX_PATH):
+            self.index = faiss.read_index(VECTOR_INDEX_PATH)
+            with open(VECTOR_META_PATH, "rb") as f:
                 self.metadata = pickle.load(f)
         else:
-            self.index = faiss.IndexFlatIP(EMBED_DIM)  # cosine via normalized vectors
+            self.index = faiss.IndexFlatIP(VECTOR_EMBED_DIM)  # cosine via normalized vectors
             self.metadata = []  # list of dicts, index-aligned with faiss vectors
 
     def add(self, embeddings: np.ndarray, records: list[dict]):
@@ -32,7 +30,7 @@ class VectorStore:
             if idx == -1:
                 continue
             record = self.metadata[idx]
-            # RBAC filter: sirf allowed roles wale chunks
+            # RBAC filter: only chunks with allowed roles
             if set(record["access_roles"]) & set(allowed_roles):
                 results.append({**record, "score": float(score)})
             if len(results) >= top_k:
@@ -40,8 +38,8 @@ class VectorStore:
         return results
 
     def _save(self):
-        faiss.write_index(self.index, INDEX_PATH)
-        with open(META_PATH, "wb") as f:
+        faiss.write_index(self.index, VECTOR_INDEX_PATH)
+        with open(VECTOR_META_PATH, "wb") as f:
             pickle.dump(self.metadata, f)
 
 vector_store = VectorStore()

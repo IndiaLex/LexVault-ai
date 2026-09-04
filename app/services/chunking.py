@@ -1,4 +1,7 @@
-def chunk_text(text: str, chunk_size: int = 400, overlap: int = 80) -> list[str]:
+from app.config import CHUNK_SIZE, CHUNK_OVERLAP
+
+
+def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     words = text.split()
     chunks = []
     start = 0

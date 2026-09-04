@@ -43,19 +43,49 @@ Stateless FastAPI microservice for scanned police document processing. Extracts 
 9. **Classify Doc** (`classifier.py`): Detect document type (FIR, WITNESS, MEDICAL, OTHER).
 10. **Redact** (`ai.py` → `/ai/redact`): Burn black rectangles onto PDF at specified coordinates.
 
+### RAG Chatbot Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         /ai/process                              │
+│   (existing pipeline: Loader → OCR → NER → PII → Policy → Boxes) │
+│                              │                                    │
+│                              ▼                                    │
+│                     index_document()                              │
+│              chunk_text → embed_texts → vector_store.add          │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                          /ai/chat                                 │
+│                              │                                    │
+│   query ──► embed_texts ──► vector_store.search (RBAC filtered)   │
+│                              │                                    │
+│                              ▼                                    │
+│              build context with [1] [2] [3] citation tags         │
+│                              │                                    │
+│                              ▼                                    │
+│                    local LLM (Ollama) generates answer             │
+│                              │                                    │
+│                              ▼                                    │
+│         { answer, sources: [{document_id, storage_key, page,      │
+│                                excerpt, confidence}] }              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ## Project Structure
 
 ```
-IndiaLex_Backend_AI/
+LexVault-ai/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                 # FastAPI app entry point, model pre-warming
-│   ├── config.py               # Model paths, thresholds, storage config
+│   ├── config.py               # Env-based configuration (reads .env)
 │   ├── schemas.py              # Pydantic models for API request/response
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── health.py           # GET /ai/health endpoint
-│   │   └── ai.py               # POST /ai/process, POST /ai/redact endpoints
+│   │   ├── ai.py               # POST /ai/process, POST /ai/redact endpoints
+│   │   └── chat.py             # POST /ai/chat endpoint (RAG chatbot)
 │   └── services/
 │       ├── __init__.py
 │       ├── loader.py           # Document loading (local + MinIO)
@@ -67,11 +97,18 @@ IndiaLex_Backend_AI/
 │       ├── redaction_service.py # Char offset → page coordinate mapping
 │       ├── redaction_policy.py # Preserve/redact rules engine
 │       ├── preprocessing.py    # Image preprocessing (deskew, denoise)
-│       └── minio_client.py     # MinIO client wrapper
+│       ├── minio_client.py     # MinIO client wrapper
+│       ├── chunking.py         # Splits OCR text into overlapping chunks
+│       ├── embedding_service.py # sentence-transformers embedding wrapper
+│       ├── vector_store.py     # FAISS-backed vector index + RBAC filtering
+│       └── chat_service.py     # Retrieval + prompt building + LLM call
 ├── tests/
 │   ├── test_integration.py     # Full pipeline integration tests
 │   └── test_accuracy.py        # PII detection accuracy measurement
 ├── sample_docs/                # Sample FIR documents for testing
+├── vector_store/               # FAISS index + metadata (auto-created)
+├── .env                        # Local environment config (git-ignored)
+├── .env.example                # Documented config template
 ├── pyproject.toml              # Dependencies and project config
 ├── accuracy_report.json        # PII detection accuracy metrics
 ├── demo.py                     # Demo script showing full pipeline
@@ -169,6 +206,45 @@ Generate a burned-in redacted PDF with black rectangles at specified coordinates
 }
 ```
 
+### `POST /ai/chat`
+
+RAG chatbot endpoint. Query processed documents with natural language and get answers backed by source citations.
+
+**Request:**
+```json
+{
+  "query": "What was the vehicle number mentioned in the FIR?",
+  "user_roles": ["default"]
+}
+```
+
+**Response:**
+```json
+{
+  "answer": "The vehicle registered at the scene was UP32CA1234 [1].",
+  "sources": [
+    {
+      "citation_id": 1,
+      "document_id": "fir-003",
+      "storage_key": "fir_003.pdf",
+      "page": 0,
+      "doc_class": "FIR",
+      "excerpt": "...Vehicle UP32CA1234 registered at the scene...",
+      "confidence": 0.91
+    }
+  ]
+}
+```
+
+**How it works:**
+1. The query is embedded using `sentence-transformers` (`all-MiniLM-L6-v2`).
+2. `vector_store.search()` retrieves top-k similar chunks, filtered by RBAC (only chunks matching the user's roles).
+3. Retrieved chunks are passed to a local LLM (Ollama) as context with citation instructions.
+4. Citation markers `[n]` are mapped back to full source metadata for clickable frontend badges.
+5. If no relevant chunks are found, returns a "not found in accessible documents" answer.
+
+**Indexing:** Documents are automatically indexed when processed via `/ai/process` — no separate step needed.
+
 ## Entity Types Detected
 
 | Type | Label | Regex/Method | Action |
@@ -191,6 +267,7 @@ Generate a burned-in redacted PDF with black rectangles at specified coordinates
 
 - Python 3.11+
 - Tesseract OCR (for pytesseract fallback): https://github.com/tesseract-ocr/tesseract
+- Ollama (for RAG chatbot): https://ollama.com
 
 ### Installation
 
@@ -205,11 +282,19 @@ pip install -e ".[dev]"
 
 # Download spaCy model
 python -m spacy download en_core_web_sm
+
+# Set up environment config
+cp .env.example .env
 ```
 
 ### Running
 
 ```bash
+# Start Ollama (for RAG chatbot)
+ollama pull llama3
+ollama serve
+
+# Start the API server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -236,12 +321,52 @@ python demo.py
 
 ## Configuration
 
-Edit `app/config.py` to adjust:
+All settings are configured via environment variables. Copy `.env.example` to `.env` and adjust as needed:
 
-- `CONFIDENCE_THRESHOLD`: Review flagging threshold (default: 0.7)
-- `TIMEOUT_SECONDS`: Processing timeout (default: 30)
-- `PREPROCESSING_CONFIG`: Enable/disable preprocessing steps
-- `STORAGE_CONFIG`: MinIO connection settings
+```bash
+cp .env.example .env
+```
+
+### Core Pipeline
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONFIDENCE_THRESHOLD` | `0.7` | Review flagging threshold |
+| `TIMEOUT_SECONDS` | `30` | Processing timeout |
+
+### MinIO Object Storage
+
+| Variable | Default | Description |
+|---|---|---|
+| `MINIO_ENDPOINT` | `localhost:9000` | MinIO server address |
+| `MINIO_ACCESS_KEY` | `minioadmin` | Access key |
+| `MINIO_SECRET_KEY` | `minioadmin` | Secret key |
+| `MINIO_BUCKET` | `indialex-docs` | Default bucket |
+| `MINIO_SECURE` | `false` | Use HTTPS |
+
+### Image Preprocessing
+
+| Variable | Default | Description |
+|---|---|---|
+| `PREPROCESSING_ENABLED` | `true` | Enable preprocessing pipeline |
+| `PREPROCESSING_DESKEW` | `true` | Correct rotation |
+| `PREPROCESSING_DENOISE` | `true` | Remove noise |
+| `PREPROCESSING_NORMALIZE_CONTRAST` | `true` | Normalize contrast |
+
+### RAG Chatbot
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence-transformers model |
+| `VECTOR_INDEX_PATH` | `vector_store/index.faiss` | FAISS index location |
+| `VECTOR_META_PATH` | `vector_store/meta.pkl` | Metadata pickle location |
+| `VECTOR_EMBED_DIM` | `384` | Embedding dimensions |
+| `CHUNK_SIZE` | `400` | Words per chunk |
+| `CHUNK_OVERLAP` | `80` | Overlap between chunks |
+| `LOCAL_LLM_URL` | `http://localhost:11434/api/generate` | Ollama endpoint |
+| `LOCAL_LLM_MODEL` | `llama3` | Ollama model name |
+| `LOCAL_LLM_TOP_K` | `5` | Chunks to retrieve per query |
+| `DEFAULT_ACCESS_ROLES` | `default` | Comma-separated default roles |
 
 ## Sample Documents
 
