@@ -291,7 +291,7 @@ cp .env.example .env
 
 ```bash
 # Start Ollama (for RAG chatbot)
-ollama pull llama3
+ollama pull llama3.2
 ollama serve
 
 # Start the API server
@@ -364,7 +364,7 @@ cp .env.example .env
 | `CHUNK_SIZE` | `400` | Words per chunk |
 | `CHUNK_OVERLAP` | `80` | Overlap between chunks |
 | `LOCAL_LLM_URL` | `http://localhost:11434/api/generate` | Ollama endpoint |
-| `LOCAL_LLM_MODEL` | `llama3` | Ollama model name |
+| `LOCAL_LLM_MODEL` | `llama3.2` | Ollama model name |
 | `LOCAL_LLM_TOP_K` | `5` | Chunks to retrieve per query |
 | `DEFAULT_ACCESS_ROLES` | `default` | Comma-separated default roles |
 

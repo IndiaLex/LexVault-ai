@@ -60,3 +60,4 @@ minio_data/
 # Keep sample_docs and accuracy_report
 !sample_docs/
 !accuracy_report.json
+vector_store/

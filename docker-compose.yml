@@ -45,7 +45,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     entrypoint: >
-      sh -c "ollama pull llama3 && echo 'Model pulled successfully' && exit 0"
+      sh -c "ollama pull llama3.2 && echo 'Model pulled successfully' && exit 0"
     restart: "no"
 
 volumes:
