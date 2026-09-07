@@ -14,15 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e ".[dev]" 2>/dev/null || \
-    pip install --no-cache-dir \
+RUN pip install --no-cache-dir \
     fastapi uvicorn[standard] \
     paddleocr paddlepaddle \
     pytesseract spacy pymupdf pillow \
     minio python-multipart \
     faiss-cpu sentence-transformers requests numpy \
-    python-dotenv \
-    pytest httpx pytest-asyncio
+    python-dotenv gunicorn
 
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
@@ -61,8 +59,13 @@ RUN mkdir -p vector_store
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/ai/health')" || exit 1
 
-# Run
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run with gunicorn for production (2 workers, uvicorn worker class)
+CMD ["gunicorn", "app.main:app", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "2", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--timeout", "120", \
+     "--preload"]
